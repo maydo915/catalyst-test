@@ -1,0 +1,28 @@
+SCRIPT DESCRIPTION 
+-------------------
+The purpose of PHP script is to read and process a CSV data file. The script will iterate through the CVS row and insert each record into MYSQL database into the table “users”.
+
+PHP script will set fields name and surname to be capitalised before insert to database. It also ensures email in valid format and set to lower case before being inserted into database.
+
+
+ASSUMPTIONS 
+-------------------
+•	The deliverable is PHP script that is run on Apache server within MAMP (Mac OS Apache MySQL PHP) stack. It can be run on XAMP stack too for Window.
+•	PHP script has built on PHP 5.6.2, no extra libraries needed
+•	Hostname:Port is configurable as localhost:8888
+•	MySQL user and password had created using phpMyAdmin tool that is access via a web browser.
+•	MySQL table “users” is created as part of PHP script.
+•	PHP script file is called – user_upload.php
+•	CSV files is called users.cvs and provided 
+•	CSV file must be located in the same directory with the script where it is installed
+•	Git is used as source control and hosted on GitHub account; https://github.com/maydo915/catalyst-test
+
+
+INSTALLATION 
+-------------------
+•	Download user_upload.php and users.csv files in local computer.
+•	Located the two files under htdocs folder where normally PHP files are ready for execution on Apache Server. They can be put in a new separate sub-folder if you wish.
+•	Open a new web browser window, type URL in address text box, e.g. http://localhost:8888/user_upload.php
+
+
+------ END -----
