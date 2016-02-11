@@ -13,34 +13,37 @@ $mysql_password = "H7GFL5CyzU5JCxvT";
 $mysql_database = "catalyst_test";
 
 try {
-    // Make a connection to database server using paramaters of driver and given credentials
+    // Make a connection to server using paramaters of driver and given credentials
     $connect_mysql = new PDO("mysql:host=$servername;dbname=$mysql_database", $mysql_user, $mysql_password);
     
     // Set the PDO error mode to exception
     $connect_mysql->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    echo "Connection is made successfully"; 
-	
-    // Set a query to retrieve user data 
-    $select_user = "SELECT userID FROM users LIMIT 1";
+    echo "<strong>Connection is made successfully</strong>"; 
 
-    // Check whether table users exist
-    $tableExists = $connect_mysql->query("SHOW TABLES LIKE 'users'")->rowCount() > 0;
-
-    // Create table users if not exist
-    if(!$tableExists){
+    // Define a query for searching any existing talbe users
+    $search_users_sql = "SHOW TABLES LIKE 'users'";
+    $search_stmt = $connect_mysql->prepare($search_users_sql);
+    
+    // Execute the sql to search table users
+    $search_stmt->execute();
+   
+    $table_user_exist = $search_stmt->rowCount();
+    if(!$table_user_exist){
         $create_users_table = "CREATE TABLE users (
-                UserID INT(6) UNSIGNED AUTO_INCREMENT,
-                Name VARCHAR(20) NOT NULL,
-                Surname VARCHAR(20) NOT NULL,
-                Email VARCHAR(50) NOT NULL,
-                PRIMARY KEY(UserID),
-                UNIQUE KEY (Email)
+            UserID INT(6) UNSIGNED AUTO_INCREMENT,
+            Name VARCHAR(20) NOT NULL,
+            Surname VARCHAR(20) NOT NULL,
+            Email VARCHAR(50) NOT NULL,
+            PRIMARY KEY(UserID),
+            UNIQUE KEY (Email)
         )" ;
-
-        $connect_mysql->exec($create_users_table);
+        
+        // Prepare a statement to create new table 
+        $create_table_stmt = $connect_mysql->prepare($create_users_table);
+        // Execute the stament to create a new table users
+        $create_table_stmt->execute();
         echo '<p>Table users created sucessfully. </p>';
     }
-
     
     /* ----------------------------------------------------------------------
         Script will iterate through the CSV rows and insert each record into a 
@@ -53,42 +56,49 @@ try {
     
     // Open CSV file for reading
     $source = fopen($filename, "r");
+    
+    // Count rows in CSV file
+    $line_number = 1;
 
     // Display all user's data from csv file
     while( ! feof($source)){
         // Parses a line from an open file, checking for CSV fields.
+        // This return a index array.
         $line = fgetcsv($source);
-
+        
         // Escapes special characters in a string for use in an SQL statement
         $name = mysql_real_escape_string($line[0]);
         // Convert name & surname to be captitialised
         $name = ucwords(strtolower($name));
-        echo $name;
         
         // Escapes special letters in surname string for use in SQL statement
         $surname = mysql_real_escape_string($line[1]);
         $surname = ucwords(strtolower($surname));
-        echo ' ' .$surname;
 
         // Convert email field into lowercase
         $email = mysql_real_escape_string($line[2]);
         $email = strtolower($email);
-        echo " " .$email;
 
         // Validate email address such as @ and . (dot) characters
         if  (!(strstr($email, "@")) or !(strstr($email, "."))){
             // Display error message for invalid email format
-            // This message should be reported to STDOUT.
-            echo '<p>Sorry, email is invalid format. This record is not inserted to Mysql database.</p>';
+            echo '<p>Line ' .$line_number. ' - Email is invalid format. This record can not be inserted to Mysql database.<br>';
         }else{ 
             // Set query for inserting data to MySQL database
-            $insert_to_users = "INSERT INTO users VALUES('', '$name', '$surname', '$email')";
-            // Insert user record into Mysql database table users
-            $connect_mysql->exec($insert_to_users);
-
-            echo " - record inserted successfully";
-        }
-        print_r("<br>");	
+            // MySQL will ignore duplicated email
+            $insert_to_users = "INSERT IGNORE INTO users(Name, Surname, Email) "
+                    . "         VALUES(:name, :surname, :email)";
+            // Prepare the query
+            $stmt = $connect_mysql->prepare($insert_to_users);
+            
+            // Execute to insert user's data into database
+            $stmt->execute(array(
+                ':name' => $name , ':surname' => $surname , ':email' => $email
+            ));
+        }	
+        
+        // Increment line number as moving to next line of record
+        $line_number++;
             
     } //end while
 
@@ -96,7 +106,32 @@ try {
     fclose($source);
     
     // Prompt user for ending inserting of records
-    echo '<p>Records have successfully inserted.</p>';
+    echo '<p>Data being successfully inserted.<br>';
+    
+    // Show total lines in CSV file
+    echo "There are <strong>$line_number</strong> lines in CSV file.</p>";
+    echo '<hr>';
+
+    // Dispaly number of row be inserted into DB
+    $select_users = "SELECT * FROM users";
+    $select_stmt = $connect_mysql->prepare($select_users);
+    $select_stmt->execute();
+    
+    $no_rows = $select_stmt->fetchAll();
+    
+    // Get number of rows inserted from database
+    echo "<p>There are <strong>" .count($no_rows). "</strong> rows inserted into MySQL database.</p>";
+    
+    // Display user's record details only if they exist
+    if(count($no_rows) >= 1 ){
+        $counter = 1;
+        foreach($no_rows as $row){
+            echo $counter. '. ' .$row['Name']. ' ' .$row['Surname']. ' ' .$row['Email']. '<br>';
+            $counter++;
+        }
+    }else{
+        echo 'No rows are inserted.';
+    }
     
 } catch(PDOException $e){
     echo "<p>Errors: " . $e->getMessage(). '</p>';
